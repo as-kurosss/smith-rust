@@ -63,6 +63,13 @@ pub use infrastructure::validation::sanitizer::sanitize_for_logging;
 #[cfg(feature = "security")]
 pub use infrastructure::validation::validator::{validate_api_request, ValidationError};
 
+#[cfg(feature = "tui")]
+pub use domain::ChatEvent;
+#[cfg(feature = "tui")]
+pub use presentation::tui::app::TuiState;
+#[cfg(feature = "tui")]
+pub use presentation::tui::events::run_tui;
+
 #[cfg(test)]
 mod tests {
     use super::*;

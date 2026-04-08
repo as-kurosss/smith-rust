@@ -1,5 +1,6 @@
 //! Domain layer — чистые бизнес-сущности без внешних зависимостей.
 
+pub mod chat_event;
 pub mod embedding;
 pub mod llm;
 pub mod memory;
@@ -10,6 +11,7 @@ pub mod security;
 pub mod session;
 pub mod tool;
 
+pub use chat_event::ChatEvent;
 pub use embedding::EmbeddingProvider;
 pub use llm::LLMProvider;
 pub use memory::{cosine_similarity, ChunkMetadata, MemoryChunk, MemoryStore};
