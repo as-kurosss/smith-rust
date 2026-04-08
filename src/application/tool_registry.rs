@@ -50,6 +50,21 @@ impl ToolRegistry {
         registry.register(Arc::new(
             crate::infrastructure::tools::calculator::CalculatorTool::new(),
         ));
+
+        #[cfg(feature = "memory")]
+        {
+            // MemorySearchTool требует store + embedding provider.
+            // Для default_tools используем mock-провайдер.
+            use crate::infrastructure::tools::memory_search::MemorySearchTool;
+            let store = Arc::new(
+                crate::infrastructure::memory::json_store::JsonMemoryStore::new("./memory"),
+            );
+            // Mock embedding provider для тестов
+            let provider = Arc::new(MockEmbeddingProvider);
+            let tool = MemorySearchTool::new(store, provider, 3);
+            registry.register(Arc::new(tool));
+        }
+
         registry
     }
 
@@ -158,6 +173,26 @@ mod tests {
         let registry = ToolRegistry::default_tools();
         let defs = registry.tool_definitions();
         let arr = defs.as_array().expect("should be array");
+        #[cfg(feature = "memory")]
+        assert_eq!(arr.len(), 4); // echo, datetime, calculator, memory_search
+        #[cfg(not(feature = "memory"))]
         assert_eq!(arr.len(), 3);
+    }
+}
+
+// ===================== Mock Embedding Provider =====================
+
+#[cfg(feature = "memory")]
+struct MockEmbeddingProvider;
+
+#[cfg(feature = "memory")]
+#[async_trait::async_trait]
+impl crate::domain::embedding::EmbeddingProvider for MockEmbeddingProvider {
+    async fn embed(&self, _text: &str) -> crate::error::Result<Vec<f32>> {
+        Ok(vec![0.0; 3])
+    }
+
+    fn dimension(&self) -> usize {
+        3
     }
 }

@@ -14,10 +14,11 @@ name = "smith"
 path = "src/main.rs"
 
 [features]
-default = ["runtime-tokio", "mock-llm"]
+default = ["runtime-tokio", "mock-llm", "memory"]
 runtime-tokio = ["dep:tokio"]
 mock-llm = []  # Enable mock LLM provider for testing
 openai = []    # Enable OpenAI-compatible API provider
+memory = []    # Enable context & memory management (RAG)
 postgres = ["dep:sqlx"]  # Optional PostgreSQL support
 
 [dependencies]

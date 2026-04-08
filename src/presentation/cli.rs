@@ -75,6 +75,23 @@ pub struct CliArgs {
     /// URL базы данных (только для postgres backend).
     #[arg(long, env = "DATABASE_URL", hide = true)]
     pub database_url: Option<String>,
+
+    // --- Memory management flags ---
+    /// Включить долгосрочную память.
+    #[arg(long, default_value_t = true)]
+    pub memory_enabled: bool,
+
+    /// Путь к директории хранения памяти.
+    #[arg(long, env = "SMITH_MEMORY_PATH", default_value = "./memory")]
+    pub memory_path: PathBuf,
+
+    /// Количество результатов поиска из памяти (top-k).
+    #[arg(long, default_value_t = 3)]
+    pub memory_top_k: usize,
+
+    /// Автоматическое наполнение памяти из диалога.
+    #[arg(long, env = "SMITH_MEMORY_AUTO_INGEST", default_value_t = true)]
+    pub memory_auto_ingest: bool,
 }
 
 impl CliArgs {

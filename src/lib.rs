@@ -33,6 +33,19 @@ pub use infrastructure::llm::r#mock::MockLLMProvider;
 #[cfg(feature = "openai")]
 pub use infrastructure::llm::openai::OpenAIProvider;
 
+#[cfg(feature = "memory")]
+pub use application::context_manager::ContextManager;
+#[cfg(feature = "memory")]
+pub use domain::embedding::EmbeddingProvider;
+#[cfg(feature = "memory")]
+pub use domain::memory::{cosine_similarity, ChunkMetadata, MemoryChunk, MemoryStore};
+#[cfg(feature = "memory")]
+pub use infrastructure::embedding::openai::OpenAIEmbeddingProvider;
+#[cfg(feature = "memory")]
+pub use infrastructure::memory::json_store::JsonMemoryStore;
+#[cfg(feature = "memory")]
+pub use infrastructure::tools::memory_search::MemorySearchTool;
+
 #[cfg(test)]
 mod tests {
     use super::*;

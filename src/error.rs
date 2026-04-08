@@ -81,6 +81,15 @@ pub enum SmithError {
         /// Настроенный лимит итераций.
         max_iterations: usize,
     },
+
+    /// Ошибка подсистемы памяти (запись, поиск, эмбеддинг).
+    #[error("Memory error: {operation} — {message}")]
+    Memory {
+        /// Операция: `add`, `search`, `embed`, `clear`.
+        operation: String,
+        /// Описание ошибки.
+        message: String,
+    },
 }
 
 /// Удобный type alias для Result с нашим типом ошибки.
@@ -180,6 +189,18 @@ mod tests {
         assert_eq!(
             format!("{err}"),
             "Tool call loop detected: exceeded max iterations (5)"
+        );
+    }
+
+    #[test]
+    fn test_error_display_memory() {
+        let err = SmithError::Memory {
+            operation: "search".to_string(),
+            message: "dimension mismatch".to_string(),
+        };
+        assert_eq!(
+            format!("{err}"),
+            "Memory error: search — dimension mismatch"
         );
     }
 }
