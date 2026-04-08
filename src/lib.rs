@@ -17,9 +17,14 @@ pub mod presentation;
 
 // Публичные реэкспорты верхнего уровня
 pub use application::chat_loop::{run_chat_loop, ChatConfig, ChatSession};
-pub use domain::{LLMProvider, LLMResponse, Message, Role};
+pub use application::session_manager::SessionManager;
+pub use application::tool_registry::ToolRegistry;
+pub use domain::session::{Session, SessionMetadata, SessionStore, SessionSummary};
+pub use domain::{
+    FunctionCall, LLMProvider, LLMResponse, Message, MessageRole, Role, Tool, ToolCall, ToolOutput,
+};
 pub use error::{Result, SmithError};
-pub use presentation::cli::{init_tracing, CliArgs};
+pub use presentation::cli::{init_tracing, AppMode, CliArgs};
 
 // Feature-gated реэкспорты
 #[cfg(feature = "mock-llm")]

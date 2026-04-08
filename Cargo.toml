@@ -25,7 +25,7 @@ postgres = ["dep:sqlx"]  # Optional PostgreSQL support
 tokio = { version = "1.0", features = ["full"], optional = true }
 
 # CLI & UI
-clap = { version = "4.0", features = ["derive"] }
+clap = { version = "4.0", features = ["derive", "env"] }
 ratatui = { version = "0.24", optional = true }
 
 # Async & HTTP
@@ -48,9 +48,10 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 # Utilities
 uuid = { version = "1.0", features = ["v4", "serde"] }
 chrono = { version = "0.4", features = ["serde"] }
+dashmap = "5.5"
 
 # Optional dependencies
-sqlx = { version = "0.7", features = ["postgres", "runtime-tokio"], optional = true }
+sqlx = { version = "0.7", features = ["postgres", "runtime-tokio", "uuid", "chrono", "json"], optional = true }
 
 [dev-dependencies]
 rstest = "0.18"          # Test fixtures
@@ -58,6 +59,7 @@ mockall = "0.12"         # Mocking framework
 proptest = "1.4"         # Property-based testing
 tokio-test = "0.4"       # Async test utilities
 wiremock = "0.6"         # HTTP mock server for integration tests
+tempfile = "3.10"        # Temporary directories for storage tests
 
 [profile.release]
 lto = "thin"             # Faster builds with good optimization

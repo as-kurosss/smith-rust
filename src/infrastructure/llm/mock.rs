@@ -35,8 +35,9 @@ impl LLMProviderTrait for MockLLMProvider {
         let user_input = messages
             .iter()
             .rev()
-            .find(|m| m.role == crate::domain::message::Role::User)
-            .map(|m| m.content.as_str())
+            .find(|m| m.role == crate::domain::message::MessageRole::User)
+            .map(|m| m.content_or_empty())
+            .filter(|s| !s.is_empty())
             .unwrap_or("<empty>");
 
         let content = format!("[MOCK] Response to: \"{user_input}\"");
@@ -65,7 +66,10 @@ mod tests {
         let messages = vec![Message::user("hello world")];
         let response = provider.chat(&messages).await.expect("chat should succeed");
 
-        assert_eq!(response.role, crate::domain::message::Role::Assistant);
+        assert_eq!(
+            response.role,
+            crate::domain::message::MessageRole::Assistant
+        );
         assert_eq!(response.content, "[MOCK] Response to: \"hello world\"");
     }
 

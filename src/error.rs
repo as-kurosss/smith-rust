@@ -48,6 +48,39 @@ pub enum SmithError {
     /// Ошибка чтения из stdin.
     #[error("I/O error: {0}")]
     Io(#[from] std::io::Error),
+
+    /// Ошибка хранилища сессий (чтение, запись, удаление).
+    #[error("Storage error: {operation} — {message}")]
+    Storage {
+        /// Название операции (save, load, delete, list).
+        operation: String,
+        /// Описание ошибки.
+        message: String,
+    },
+
+    /// Некорректное состояние приложения (например, save без load).
+    #[error("Invalid state: {0}")]
+    InvalidState(String),
+
+    /// Инструмент с указанным именем не найден в реестре.
+    #[error("Tool not found: {0}")]
+    ToolNotFound(String),
+
+    /// Ошибка выполнения инструмента.
+    #[error("Tool execution failed ({tool_name}): {message}")]
+    ToolExecution {
+        /// Имя инструмента.
+        tool_name: String,
+        /// Описание ошибки.
+        message: String,
+    },
+
+    /// Превышен лимит итераций tool calls (защита от бесконечного цикла).
+    #[error("Tool call loop detected: exceeded max iterations ({max_iterations})")]
+    ToolLoopDetected {
+        /// Настроенный лимит итераций.
+        max_iterations: usize,
+    },
 }
 
 /// Удобный type alias для Result с нашим типом ошибки.
@@ -105,6 +138,48 @@ mod tests {
         assert_eq!(
             format!("{err}"),
             "Upstream server error: internal error (status: 500)"
+        );
+    }
+
+    #[test]
+    fn test_error_display_storage() {
+        let err = SmithError::Storage {
+            operation: "save".to_string(),
+            message: "permission denied".to_string(),
+        };
+        assert_eq!(format!("{err}"), "Storage error: save — permission denied");
+    }
+
+    #[test]
+    fn test_error_display_invalid_state() {
+        let err = SmithError::InvalidState("no session loaded".to_string());
+        assert_eq!(format!("{err}"), "Invalid state: no session loaded");
+    }
+
+    #[test]
+    fn test_error_display_tool_not_found() {
+        let err = SmithError::ToolNotFound("unknown_tool".to_string());
+        assert_eq!(format!("{err}"), "Tool not found: unknown_tool");
+    }
+
+    #[test]
+    fn test_error_display_tool_execution() {
+        let err = SmithError::ToolExecution {
+            tool_name: "calculator".to_string(),
+            message: "division by zero".to_string(),
+        };
+        assert_eq!(
+            format!("{err}"),
+            "Tool execution failed (calculator): division by zero"
+        );
+    }
+
+    #[test]
+    fn test_error_display_tool_loop_detected() {
+        let err = SmithError::ToolLoopDetected { max_iterations: 5 };
+        assert_eq!(
+            format!("{err}"),
+            "Tool call loop detected: exceeded max iterations (5)"
         );
     }
 }

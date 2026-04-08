@@ -18,7 +18,7 @@ use tokio::sync::Mutex;
 use tokio::time::{sleep, Duration};
 use tracing::{debug, error, info, warn};
 
-use crate::domain::message::{LLMResponse, Message, Role};
+use crate::domain::message::{LLMResponse, Message};
 use crate::domain::LLMProvider as LLMProviderTrait;
 use crate::error::{Result, SmithError};
 
@@ -158,11 +158,12 @@ impl OpenAIProvider {
             .iter()
             .map(|m| OpenAIMessage {
                 role: match m.role {
-                    Role::User => "user".to_string(),
-                    Role::Assistant => "assistant".to_string(),
-                    Role::System => "system".to_string(),
+                    crate::domain::message::MessageRole::User => "user".to_string(),
+                    crate::domain::message::MessageRole::Assistant => "assistant".to_string(),
+                    crate::domain::message::MessageRole::System => "system".to_string(),
+                    crate::domain::message::MessageRole::Tool => "tool".to_string(),
                 },
-                content: m.content.clone(),
+                content: m.content.clone().unwrap_or_default(),
             })
             .collect()
     }
@@ -370,7 +371,10 @@ mod tests {
         let messages = vec![Message::user("Hi")];
         let response = provider.chat(&messages).await.expect("chat should succeed");
         assert_eq!(response.content, "Hello from mock!");
-        assert_eq!(response.role, Role::Assistant);
+        assert_eq!(
+            response.role,
+            crate::domain::message::MessageRole::Assistant
+        );
     }
 
     #[tokio::test]

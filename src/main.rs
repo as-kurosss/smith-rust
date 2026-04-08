@@ -12,7 +12,9 @@ use std::io::{self, BufReader};
 use anyhow::{Context, Result};
 use tracing::info;
 
-use smith_rust::{init_tracing, run_chat_loop, ChatConfig, ChatSession, CliArgs, MockLLMProvider};
+use smith_rust::{
+    init_tracing, run_chat_loop, ChatConfig, ChatSession, CliArgs, MockLLMProvider, ToolRegistry,
+};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -24,9 +26,12 @@ async fn main() -> Result<()> {
     info!(version = env!("CARGO_PKG_VERSION"), "smith started");
 
     // 3. Создаём конфигурацию чата
+    let tool_registry = std::sync::Arc::new(ToolRegistry::default_tools());
     let config = ChatConfig {
         max_history: args.max_history,
         system_prompt: Some(args.system_prompt),
+        tool_registry: Some(tool_registry),
+        max_tool_iterations: 5,
     };
 
     // 4. Выбираем провайдер (mock-режим по умолчанию для шага 00)

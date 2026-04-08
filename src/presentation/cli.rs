@@ -3,7 +3,23 @@
 //! Единственное место, где допускается вывод в stdout
 //! для пользовательского взаимодействия (через std::io).
 
+use std::path::PathBuf;
+
 use clap::Parser;
+use uuid::Uuid;
+
+/// Режим работы приложения после парсинга аргументов.
+#[derive(Debug, Clone, PartialEq)]
+pub enum AppMode {
+    /// Batch-режим: вывести список сессий и завершить работу.
+    ListSessions,
+    /// Batch-режим: загрузить сессию и завершить (или подготовить к save).
+    LoadSession(Uuid),
+    /// Batch-режим: сохранить активную сессию и завершить.
+    SaveSession,
+    /// Интерактивный режим: запустить чат-цикл.
+    Interactive,
+}
 
 /// smith — CLI-приложение для общения с LLM-агентом.
 #[derive(Parser, Debug)]
@@ -34,6 +50,31 @@ pub struct CliArgs {
     /// Уровень логирования (RUST_LOG override).
     #[arg(long, default_value = "smith_rust=info")]
     pub log_level: String,
+
+    // --- Session management flags ---
+    /// Путь к директории хранения сессий.
+    #[arg(long, env = "SMITH_STORAGE_PATH", default_value = "./sessions")]
+    pub storage_path: PathBuf,
+
+    /// Бэкенд хранения: `json`, `postgres`, `memory`.
+    #[arg(long, default_value = "json", value_parser = ["json", "postgres", "memory"])]
+    pub storage_backend: String,
+
+    /// Загрузить сессию по UUID и завершить работу.
+    #[arg(long)]
+    pub session_load: Option<Uuid>,
+
+    /// Сохранить активную сессию и завершить работу.
+    #[arg(long)]
+    pub session_save: bool,
+
+    /// Вывести список всех сессий и завершить работу.
+    #[arg(long)]
+    pub session_list: bool,
+
+    /// URL базы данных (только для postgres backend).
+    #[arg(long, env = "DATABASE_URL", hide = true)]
+    pub database_url: Option<String>,
 }
 
 impl CliArgs {
@@ -41,6 +82,20 @@ impl CliArgs {
     #[must_use]
     pub fn parse_from_cli() -> Self {
         Self::parse()
+    }
+
+    /// Определяет режим работы приложения.
+    #[must_use]
+    pub fn mode(&self) -> AppMode {
+        if self.session_list {
+            AppMode::ListSessions
+        } else if let Some(id) = self.session_load {
+            AppMode::LoadSession(id)
+        } else if self.session_save {
+            AppMode::SaveSession
+        } else {
+            AppMode::Interactive
+        }
     }
 }
 
@@ -75,6 +130,12 @@ mod tests {
         assert_eq!(args.base_url, "https://api.openai.com");
         assert!(args.mock);
         assert_eq!(args.log_level, "smith_rust=info");
+        assert_eq!(args.storage_path, PathBuf::from("./sessions"));
+        assert_eq!(args.storage_backend, "json");
+        assert!(args.session_load.is_none());
+        assert!(!args.session_save);
+        assert!(!args.session_list);
+        assert_eq!(args.mode(), AppMode::Interactive);
     }
 
     #[test]
@@ -97,5 +158,24 @@ mod tests {
         assert_eq!(args.model, "gpt-4");
         assert_eq!(args.base_url, "http://localhost:8080");
         assert_eq!(args.log_level, "debug");
+    }
+
+    #[test]
+    fn test_session_load_mode() {
+        let id = uuid::Uuid::new_v4();
+        let args = CliArgs::parse_from(&["smith", "--session-load", &id.to_string()]);
+        assert_eq!(args.mode(), AppMode::LoadSession(id));
+    }
+
+    #[test]
+    fn test_session_list_mode() {
+        let args = CliArgs::parse_from(&["smith", "--session-list"]);
+        assert_eq!(args.mode(), AppMode::ListSessions);
+    }
+
+    #[test]
+    fn test_session_save_mode() {
+        let args = CliArgs::parse_from(&["smith", "--session-save"]);
+        assert_eq!(args.mode(), AppMode::SaveSession);
     }
 }
