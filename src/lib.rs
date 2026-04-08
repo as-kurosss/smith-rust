@@ -17,13 +17,16 @@ pub mod presentation;
 
 // Публичные реэкспорты верхнего уровня
 pub use application::chat_loop::{run_chat_loop, ChatConfig, ChatSession};
+pub use application::retry_policy::with_retry;
 pub use application::session_manager::SessionManager;
 pub use application::tool_registry::ToolRegistry;
+pub use domain::observability::{HealthStatus, RetryPolicy, SystemHealth};
 pub use domain::session::{Session, SessionMetadata, SessionStore, SessionSummary};
 pub use domain::{
     FunctionCall, LLMProvider, LLMResponse, Message, MessageRole, Role, Tool, ToolCall, ToolOutput,
 };
 pub use error::{Result, SmithError};
+pub use infrastructure::health::HealthChecker;
 pub use presentation::cli::{init_tracing, AppMode, CliArgs};
 
 // Feature-gated реэкспорты

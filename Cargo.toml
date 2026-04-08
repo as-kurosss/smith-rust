@@ -14,11 +14,12 @@ name = "smith"
 path = "src/main.rs"
 
 [features]
-default = ["runtime-tokio", "mock-llm", "memory"]
+default = ["runtime-tokio", "mock-llm", "memory", "observability"]
 runtime-tokio = ["dep:tokio"]
 mock-llm = []  # Enable mock LLM provider for testing
 openai = []    # Enable OpenAI-compatible API provider
 memory = []    # Enable context & memory management (RAG)
+observability = ["dep:metrics", "dep:metrics-exporter-prometheus"]
 postgres = ["dep:sqlx"]  # Optional PostgreSQL support
 
 [dependencies]
@@ -50,6 +51,9 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 uuid = { version = "1.0", features = ["v4", "serde"] }
 chrono = { version = "0.4", features = ["serde"] }
 dashmap = "5.5"
+fastrand = "2.1"
+metrics = { version = "0.23", optional = true }
+metrics-exporter-prometheus = { version = "0.15", optional = true }
 
 # Optional dependencies
 sqlx = { version = "0.7", features = ["postgres", "runtime-tokio", "uuid", "chrono", "json"], optional = true }
