@@ -17,6 +17,7 @@ path = "src/main.rs"
 default = ["runtime-tokio", "mock-llm"]
 runtime-tokio = ["dep:tokio"]
 mock-llm = []  # Enable mock LLM provider for testing
+openai = []    # Enable OpenAI-compatible API provider
 postgres = ["dep:sqlx"]  # Optional PostgreSQL support
 
 [dependencies]
@@ -56,6 +57,7 @@ rstest = "0.18"          # Test fixtures
 mockall = "0.12"         # Mocking framework
 proptest = "1.4"         # Property-based testing
 tokio-test = "0.4"       # Async test utilities
+wiremock = "0.6"         # HTTP mock server for integration tests
 
 [profile.release]
 lto = "thin"             # Faster builds with good optimization

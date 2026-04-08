@@ -25,6 +25,9 @@ pub use presentation::cli::{init_tracing, CliArgs};
 #[cfg(feature = "mock-llm")]
 pub use infrastructure::llm::r#mock::MockLLMProvider;
 
+#[cfg(feature = "openai")]
+pub use infrastructure::llm::openai::OpenAIProvider;
+
 #[cfg(test)]
 mod tests {
     use super::*;

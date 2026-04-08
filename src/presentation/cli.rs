@@ -19,6 +19,14 @@ pub struct CliArgs {
     #[arg(long, default_value_t = 50)]
     pub max_history: usize,
 
+    /// Имя модели (например, gpt-3.5-turbo, gpt-4).
+    #[arg(long, default_value = "gpt-3.5-turbo")]
+    pub model: String,
+
+    /// Base URL для OpenAI-совместимого API.
+    #[arg(long, default_value = "https://api.openai.com")]
+    pub base_url: String,
+
     /// Включить mock-режим LLM (без реальных API-вызовов).
     #[arg(long, default_value_t = true)]
     pub mock: bool,
@@ -63,6 +71,8 @@ mod tests {
         let args = CliArgs::parse_from(&["smith"]);
         assert_eq!(args.system_prompt, "You are a helpful assistant.");
         assert_eq!(args.max_history, 50);
+        assert_eq!(args.model, "gpt-3.5-turbo");
+        assert_eq!(args.base_url, "https://api.openai.com");
         assert!(args.mock);
         assert_eq!(args.log_level, "smith_rust=info");
     }
@@ -75,11 +85,17 @@ mod tests {
             "Custom prompt",
             "--max-history",
             "10",
+            "--model",
+            "gpt-4",
+            "--base-url",
+            "http://localhost:8080",
             "--log-level",
             "debug",
         ]);
         assert_eq!(args.system_prompt, "Custom prompt");
         assert_eq!(args.max_history, 10);
+        assert_eq!(args.model, "gpt-4");
+        assert_eq!(args.base_url, "http://localhost:8080");
         assert_eq!(args.log_level, "debug");
     }
 }

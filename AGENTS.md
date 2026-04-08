@@ -71,6 +71,18 @@ When generating code, ALWAYS follow this sequence:
 - If a comment block ends with an empty line, ensure it's intentional and use `//!` for file-level docs.
 - Run `cargo clippy -- -D clippy::empty_line_after_doc_comments` before finalizing code generation.
 
+## 🤖 Automation Protocol
+
+When a step is complete and all checks pass, use the verification script:
+
+```powershell
+./scripts/verify-and-publish.ps1 -Step "XX" -Message "краткое описание" -Features "openai postgres"
+```
+
+For local testing without push: add `--NoPush` flag.
+
+NEVER attempt to commit/push without running verification first.
+
 ## 📚 Reference Materials
 - Original Python project: https://github.com/czl9707/build-your-own-openclaw
 - Rust Async Book: https://rust-lang.github.io/async-book/

@@ -4,7 +4,13 @@
       "Bash(cargo build)",
       "Bash(cargo test)",
       "Bash(cargo clippy *)",
-      "Bash(cargo fmt *)"
+      "Bash(cargo fmt *)",
+      "Bash(./scripts/verify-and-publish.ps1 *)",
+      "Bash(pwsh *)",
+      "Bash(powershell.exe *)",
+      "Bash(d:)",
+      "Bash(git add *)",
+      "Bash(git commit *)"
     ]
   },
   "$version": 3
