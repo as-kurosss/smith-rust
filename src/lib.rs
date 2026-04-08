@@ -17,6 +17,7 @@ pub mod presentation;
 
 // Публичные реэкспорты верхнего уровня
 pub use application::chat_loop::{run_chat_loop, ChatConfig, ChatSession};
+pub use application::rate_limiter::RateLimiter;
 pub use application::retry_policy::with_retry;
 pub use application::session_manager::SessionManager;
 pub use application::tool_registry::ToolRegistry;
@@ -48,6 +49,19 @@ pub use infrastructure::embedding::openai::OpenAIEmbeddingProvider;
 pub use infrastructure::memory::json_store::JsonMemoryStore;
 #[cfg(feature = "memory")]
 pub use infrastructure::tools::memory_search::MemorySearchTool;
+
+#[cfg(feature = "security")]
+pub use application::audit_logger::{AuditLogger, TracingAuditLogger};
+#[cfg(feature = "security")]
+pub use domain::security::{AuditEvent, SanitizationAction, Secret, SecretProvider, SecurityError};
+#[cfg(feature = "security")]
+pub use infrastructure::secrets::env::EnvSecretProvider;
+#[cfg(feature = "security")]
+pub use infrastructure::secrets::memory::MemorySecretProvider;
+#[cfg(feature = "security")]
+pub use infrastructure::validation::sanitizer::sanitize_for_logging;
+#[cfg(feature = "security")]
+pub use infrastructure::validation::validator::{validate_api_request, ValidationError};
 
 #[cfg(test)]
 mod tests {

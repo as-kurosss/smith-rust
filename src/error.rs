@@ -90,6 +90,13 @@ pub enum SmithError {
         /// Описание ошибки.
         message: String,
     },
+
+    /// Rate limit превышен для клиента.
+    #[error("Rate limit exceeded for client: {client_id}")]
+    RateLimitExceeded {
+        /// Идентификатор клиента.
+        client_id: String,
+    },
 }
 
 /// Удобный type alias для Result с нашим типом ошибки.
@@ -201,6 +208,17 @@ mod tests {
         assert_eq!(
             format!("{err}"),
             "Memory error: search — dimension mismatch"
+        );
+    }
+
+    #[test]
+    fn test_error_display_rate_limit_exceeded() {
+        let err = SmithError::RateLimitExceeded {
+            client_id: "192.168.1.1".to_string(),
+        };
+        assert_eq!(
+            format!("{err}"),
+            "Rate limit exceeded for client: 192.168.1.1"
         );
     }
 }

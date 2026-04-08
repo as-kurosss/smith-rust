@@ -96,9 +96,8 @@ impl RetryPolicy {
     /// Формула: `min(initial * base^attempt + jitter, max_delay)`
     #[must_use]
     pub fn calculate_delay(&self, attempt: u32) -> Duration {
-        let base_delay_ms = (self.initial_delay_ms as f64
-            * self.exponential_base.powi(attempt as i32))
-        .min(self.max_delay_ms as f64);
+        let base_delay_ms =
+            self.initial_delay_ms as f64 * self.exponential_base.powi(attempt as i32);
 
         let delay_ms = if self.jitter {
             // ±25% jitter
@@ -109,7 +108,9 @@ impl RetryPolicy {
             base_delay_ms
         };
 
-        Duration::from_millis(delay_ms as u64)
+        // Cap AFTER jitter to ensure max_delay is never exceeded
+        let capped = delay_ms.min(self.max_delay_ms as f64);
+        Duration::from_millis(capped as u64)
     }
 
     /// Проверяет, является ли ошибка retryable.

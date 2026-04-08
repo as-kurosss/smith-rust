@@ -14,12 +14,15 @@ name = "smith"
 path = "src/main.rs"
 
 [features]
-default = ["runtime-tokio", "mock-llm", "memory", "observability"]
+default = ["runtime-tokio", "mock-llm", "memory", "observability", "security"]
 runtime-tokio = ["dep:tokio"]
 mock-llm = []  # Enable mock LLM provider for testing
 openai = []    # Enable OpenAI-compatible API provider
 memory = []    # Enable context & memory management (RAG)
 observability = ["dep:metrics", "dep:metrics-exporter-prometheus"]
+security = ["dep:zeroize", "dep:regex"]  # Secret management, audit, sanitization
+keyring = ["security", "dep:keyring"]  # OS-level secrets
+request-signing = ["security", "dep:hmac", "dep:sha2"]
 postgres = ["dep:sqlx"]  # Optional PostgreSQL support
 
 [dependencies]
@@ -54,6 +57,11 @@ dashmap = "5.5"
 fastrand = "2.1"
 metrics = { version = "0.23", optional = true }
 metrics-exporter-prometheus = { version = "0.15", optional = true }
+zeroize = { version = "1.7", optional = true }
+regex = { version = "1.10", optional = true }
+keyring = { version = "2.3", optional = true }
+hmac = { version = "0.12", optional = true }
+sha2 = { version = "0.10", optional = true }
 
 # Optional dependencies
 sqlx = { version = "0.7", features = ["postgres", "runtime-tokio", "uuid", "chrono", "json"], optional = true }
