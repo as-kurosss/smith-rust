@@ -14,16 +14,20 @@ name = "smith"
 path = "src/main.rs"
 
 [features]
-default = ["runtime-tokio", "mock-llm", "memory", "observability", "security"]
+default = ["runtime-tokio", "mock-llm"]
 runtime-tokio = ["dep:tokio"]
 mock-llm = []  # Enable mock LLM provider for testing
 openai = []    # Enable OpenAI-compatible API provider
-memory = []    # Enable context & memory management (RAG)
-observability = ["dep:metrics", "dep:metrics-exporter-prometheus"]
+memory = ["dep:dashmap"]  # Enable context & memory management (RAG)
+observability = [
+  "dep:metrics",
+  "dep:metrics-exporter-prometheus",
+  "dep:fastrand",
+]
 security = ["dep:zeroize", "dep:regex"]  # Secret management, audit, sanitization
 keyring = ["security", "dep:keyring"]  # OS-level secrets
 request-signing = ["security", "dep:hmac", "dep:sha2"]
-tui = ["dep:ratatui", "dep:crossterm"]  # Terminal UI
+tui = ["dep:ratatui", "dep:crossterm", "dep:futures-util"]  # Terminal UI
 postgres = ["dep:sqlx"]  # Optional PostgreSQL support
 
 [dependencies]
@@ -34,7 +38,6 @@ tokio = { version = "1.0", features = ["full"], optional = true }
 clap = { version = "4.0", features = ["derive", "env"] }
 ratatui = { version = "0.24", optional = true }
 crossterm = { version = "0.27", optional = true, features = ["event-stream"] }
-futures-util = "0.3"
 
 # Async & HTTP
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
@@ -56,8 +59,8 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 # Utilities
 uuid = { version = "1.0", features = ["v4", "serde"] }
 chrono = { version = "0.4", features = ["serde"] }
-dashmap = "5.5"
-fastrand = "2.1"
+dashmap = { version = "5.5", optional = true }
+fastrand = { version = "2.1", optional = true }
 metrics = { version = "0.23", optional = true }
 metrics-exporter-prometheus = { version = "0.15", optional = true }
 zeroize = { version = "1.7", optional = true }
@@ -65,6 +68,7 @@ regex = { version = "1.10", optional = true }
 keyring = { version = "2.3", optional = true }
 hmac = { version = "0.12", optional = true }
 sha2 = { version = "0.10", optional = true }
+futures-util = { version = "0.3", optional = true }
 
 # Optional dependencies
 sqlx = { version = "0.7", features = ["postgres", "runtime-tokio", "uuid", "chrono", "json"], optional = true }

@@ -18,7 +18,7 @@ pub const CHUNK_SIZE: usize = 500;
 pub const CHUNK_OVERLAP: usize = 50;
 
 /// Сообщение для фоновой задачи обработки памяти.
-struct IngestTask {
+pub struct IngestTask {
     content: String,
     metadata: ChunkMetadata,
 }
@@ -30,24 +30,40 @@ pub struct ContextManager {
 }
 
 impl ContextManager {
-    /// Создаёт менеджер с фоновым воркером.
+    /// Создаёт менеджер без фонового воркера.
+    ///
+    /// Воркер должен быть запущен вызывающим кодом (обычно в `main.rs`)
+    /// через [`spawn_background_worker`](Self::spawn_background_worker).
+    #[must_use]
+    pub fn new(channel_capacity: usize) -> Self {
+        let (tx, _rx) = mpsc::channel::<IngestTask>(channel_capacity);
+        Self { sender: tx }
+    }
+
+    /// Создаёт канал и возвращает обе стороны (sender + receiver).
+    ///
+    /// Receiver должен быть передан фоновой задаче.
+    #[must_use]
+    pub fn with_channel(channel_capacity: usize) -> (Self, mpsc::Receiver<IngestTask>) {
+        let (tx, rx) = mpsc::channel::<IngestTask>(channel_capacity);
+        (Self { sender: tx }, rx)
+    }
+
+    /// Запускает фоновую задачу обработки памяти.
     ///
     /// # Arguments
     ///
+    /// * `rx` — приёмник задач (полученный из `with_channel`).
     /// * `store` — хранилище памяти.
     /// * `embedding_provider` — провайдер эмбеддингов.
-    /// * `channel_capacity` — размер канала (по умолчанию 32).
     ///
-    /// Возвращает менеджер и JoinHandle фоновой задачи.
-    #[must_use]
-    pub fn new(
+    /// Возвращает JoinHandle фоновой задачи.
+    pub fn spawn_background_worker(
+        mut rx: mpsc::Receiver<IngestTask>,
         store: Arc<dyn MemoryStore>,
         embedding_provider: Arc<dyn EmbeddingProvider>,
-        channel_capacity: usize,
-    ) -> (Self, tokio::task::JoinHandle<()>) {
-        let (tx, mut rx) = mpsc::channel::<IngestTask>(channel_capacity);
-
-        let handle = tokio::spawn(async move {
+    ) -> tokio::task::JoinHandle<()> {
+        tokio::spawn(async move {
             info!("memory background worker started");
             while let Some(task) = rx.recv().await {
                 // Разбиваем на чанки
@@ -69,9 +85,7 @@ impl ContextManager {
                 }
             }
             info!("memory background worker stopped");
-        });
-
-        (Self { sender: tx }, handle)
+        })
     }
 
     /// Добавляет сообщение в очередь на обработку (неблокирующе).
@@ -221,12 +235,17 @@ mod tests {
     async fn test_context_manager_ingest() {
         let store = Arc::new(MockStore::default());
         let provider = Arc::new(MockEmbeddingProvider);
-        let (manager, _handle) = ContextManager::new(store.clone(), provider, 32);
+        let (manager, rx) = ContextManager::with_channel(32);
+
+        // Запускаем воркер вручную
+        let worker_handle = ContextManager::spawn_background_worker(rx, store.clone(), provider);
 
         manager.ingest_message("test message".to_string(), "user_message".to_string());
 
         // Даём время фоновой задаче обработать
         tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+        drop(manager); // закрываем канал
+        worker_handle.abort();
 
         let chunks = store.chunks.lock().await;
         assert!(!chunks.is_empty());

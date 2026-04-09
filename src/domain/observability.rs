@@ -102,7 +102,15 @@ impl RetryPolicy {
         let delay_ms = if self.jitter {
             // ±25% jitter
             let jitter_range = base_delay_ms * 0.25;
+            #[cfg(feature = "observability")]
             let jitter = fastrand::f64() * jitter_range * 2.0 - jitter_range;
+            #[cfg(not(feature = "observability"))]
+            let jitter = {
+                // Deterministic fallback without external RNG
+                // Uses attempt number as pseudo-random source
+                let seed = (attempt as f64 * 2654435761.0).fract();
+                seed * jitter_range * 2.0 - jitter_range
+            };
             (base_delay_ms + jitter).max(0.0)
         } else {
             base_delay_ms

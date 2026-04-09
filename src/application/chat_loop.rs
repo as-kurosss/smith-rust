@@ -150,10 +150,14 @@ impl<P: LLMProvider> ChatSession<P> {
         })?;
 
         for tc in tool_calls {
+            // Санитизируем аргументы перед логированием
+            let sanitized_args = crate::infrastructure::validation::sanitizer::sanitize_for_logging(
+                &tc.function.arguments,
+            );
             debug!(
                 tool_id = %tc.id,
                 tool_name = %tc.function.name,
-                arguments = %tc.function.arguments,
+                arguments = %sanitized_args,
                 "executing tool call"
             );
 
@@ -173,10 +177,13 @@ impl<P: LLMProvider> ChatSession<P> {
                 }
             };
 
+            // Санитизируем результат перед логированием
+            let sanitized_content =
+                crate::infrastructure::validation::sanitizer::sanitize_for_logging(&output.content);
             debug!(
                 tool_name,
                 success = output.success,
-                content_len = output.content.len(),
+                content_len = sanitized_content.len(),
                 "tool execution completed"
             );
 

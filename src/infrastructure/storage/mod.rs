@@ -1,6 +1,7 @@
 //! Infrastructure-реализации хранилищ сессий.
 
 pub mod json;
+#[cfg(feature = "memory")]
 pub mod memory;
 
 #[cfg(feature = "postgres")]

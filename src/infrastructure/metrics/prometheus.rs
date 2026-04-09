@@ -14,37 +14,30 @@ pub mod names {
     pub const ERRORS_TOTAL: &str = "smith_errors_total";
 }
 
-/// Инициализирует Prometheus exporter на заданном порту.
+/// Инициализирует Prometheus exporter (устанавливает глобальный рекордер).
 ///
-/// # Arguments
+/// Возвращает `true` при успешной инициализации.
 ///
-/// * `port` — порт для HTTP-сервера метрик.
+/// # Примечание
 ///
-/// Возвращает JoinHandle фоновой задачи.
-pub fn init_exporter(port: u16) -> tokio::task::JoinHandle<()> {
+/// Сама задача запуска HTTP-сервера должна быть запущена
+/// вызывающим кодом (обычно в `main.rs`).
+pub fn init_exporter(port: u16) -> bool {
     info!(port, "initializing prometheus metrics exporter");
 
-    let handle = tokio::spawn(async move {
-        // metrics-exporter-prometheus запускает свой HTTP-сервер
-        // В рамках этого шага используем упрощённую реализацию.
-        // Для production: metrics_exporter_prometheus::PrometheusBuilder::new()
-        //     .with_http_listener(([0, 0, 0, 0], port))
-        //     .install()
-        match metrics_exporter_prometheus::PrometheusBuilder::new()
-            .with_http_listener(([0, 0, 0, 0], port))
-            .install()
-        {
-            Ok(_) => info!(port, "prometheus exporter started"),
-            Err(e) => warn!(port, error = %e, "failed to start prometheus exporter"),
+    match metrics_exporter_prometheus::PrometheusBuilder::new()
+        .with_http_listener(([0, 0, 0, 0], port))
+        .install()
+    {
+        Ok(_) => {
+            info!(port, "prometheus exporter installed");
+            true
         }
-
-        // Держим задачу живой
-        loop {
-            tokio::time::sleep(std::time::Duration::from_secs(60)).await;
+        Err(e) => {
+            warn!(port, error = %e, "failed to install prometheus exporter");
+            false
         }
-    });
-
-    handle
+    }
 }
 
 /// Инкрементирует счётчик запросов.

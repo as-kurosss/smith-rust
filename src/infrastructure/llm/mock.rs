@@ -40,7 +40,10 @@ impl LLMProviderTrait for MockLLMProvider {
             .filter(|s| !s.is_empty())
             .unwrap_or("<empty>");
 
-        let content = format!("[MOCK] Response to: \"{user_input}\"");
+        // Санитизируем ввод перед логированием
+        let sanitized =
+            crate::infrastructure::validation::sanitizer::sanitize_for_logging(user_input);
+        let content = format!("[MOCK] Response to: \"{sanitized}\"");
         debug!(%content, "Mock LLM generated response");
 
         // Имитация сетевой задержки (1мс)
