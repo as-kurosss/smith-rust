@@ -45,12 +45,8 @@ async fn main() -> Result<()> {
 
     // 5. Запускаем нужный режим
     #[cfg(feature = "tui")]
-    {
-        // Проверяем, есть ли флаг --tui в аргументах
-        let use_tui = std::env::args().any(|a| a == "--tui");
-        if use_tui {
-            return run_tui_mode(config, provider).await;
-        }
+    if args.tui {
+        return run_tui_mode(config, provider).await;
     }
 
     // CLI режим

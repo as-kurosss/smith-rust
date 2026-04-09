@@ -11,7 +11,8 @@
       "Bash(d:)",
       "Bash(git add *)",
       "Bash(git commit *)",
-      "Bash(findstr *)"
+      "Bash(findstr *)",
+      "Bash(git push)"
     ]
   },
   "$version": 3

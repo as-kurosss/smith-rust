@@ -92,6 +92,11 @@ pub struct CliArgs {
     /// Автоматическое наполнение памяти из диалога.
     #[arg(long, env = "SMITH_MEMORY_AUTO_INGEST", default_value_t = true)]
     pub memory_auto_ingest: bool,
+
+    /// Запустить интерактивный TUI-интерфейс.
+    #[cfg(feature = "tui")]
+    #[arg(long, default_value_t = false)]
+    pub tui: bool,
 }
 
 impl CliArgs {
