@@ -38,27 +38,32 @@ pub enum SecurityError {
 ///
 /// Автоматически очищает память при drop через `zeroize`.
 /// Не реализует `Display` и `Debug` для предотвращения случайной утечки.
-pub struct Secret<T: Zeroize>(Option<T>);
+pub struct Secret<T: Zeroize>(T);
 
 impl<T: Zeroize> Secret<T> {
     /// Создаёт новый секрет.
     #[must_use]
     pub fn new(value: T) -> Self {
-        Self(Some(value))
+        Self(value)
     }
 
     /// Возвращает ссылку на значение.
-    ///
-    /// # Safety
-    ///
-    /// Используйте минимально необходимое время жизни ссылки.
     pub fn expose(&self) -> &T {
-        self.0.as_ref().expect("Secret value is present")
+        &self.0
     }
 
     /// Потребляет секрет и возвращает значение.
-    pub fn into_inner(mut self) -> T {
-        self.0.take().expect("Secret value is present")
+    ///
+    /// # Safety
+    ///
+    /// Использует `ManuallyDrop` для предотвращения двойного drop.
+    /// Это безопасно, т.к. `self` потребляется и не будет дропнут.
+    pub fn into_inner(self) -> T {
+        let this = std::mem::ManuallyDrop::new(self);
+        // SAFETY: We own `this` and are consuming it, so the value is valid.
+        // ManuallyDrop prevents the destructor from running, so we can safely
+        // read the inner value without double-free.
+        unsafe { std::ptr::read(&this.0) }
     }
 }
 
@@ -70,15 +75,13 @@ impl<T: Zeroize + Clone> Clone for Secret<T> {
 
 impl<T: Zeroize + Default> Default for Secret<T> {
     fn default() -> Self {
-        Self(Some(T::default()))
+        Self(T::default())
     }
 }
 
 impl<T: Zeroize> Drop for Secret<T> {
     fn drop(&mut self) {
-        if let Some(mut val) = self.0.take() {
-            val.zeroize();
-        }
+        self.0.zeroize();
     }
 }
 

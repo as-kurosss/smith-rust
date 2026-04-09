@@ -92,11 +92,13 @@ impl TokenBucket {
 /// ```no_run
 /// use smith_rust::infrastructure::llm::openai::OpenAIProvider;
 ///
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// let provider = OpenAIProvider::new(
 ///     "https://api.openai.com".to_string(),
 ///     "sk-...".to_string(),
 ///     "gpt-3.5-turbo".to_string(),
-/// );
+/// )?;
+/// # Ok(()) }
 /// ```
 pub struct OpenAIProvider {
     /// HTTP-клиент (переиспользуется между запросами).
@@ -121,21 +123,26 @@ impl OpenAIProvider {
     /// * `model` — имя модели.
     ///
     /// Rate limiting: 10 запросов/минуту (рефилл 1 токен каждые 6 секунд).
-    #[must_use]
-    pub fn new(base_url: String, api_key: String, model: String) -> Self {
+    ///
+    /// # Errors
+    ///
+    /// Возвращает [`SmithError::LLM`] при невозможности создания HTTP-клиента.
+    pub fn new(base_url: String, api_key: String, model: String) -> Result<Self> {
         // 10 requests/minute = 1 token / 6 seconds
         let rate_limiter = Arc::new(Mutex::new(TokenBucket::new(10.0, 1.0 / 6.0)));
 
-        Self {
-            client: Client::builder()
-                .timeout(Duration::from_secs(30))
-                .build()
-                .expect("valid reqwest client"),
+        let client = Client::builder()
+            .timeout(Duration::from_secs(30))
+            .build()
+            .map_err(|e| SmithError::LLM(format!("failed to build HTTP client: {e}")))?;
+
+        Ok(Self {
+            client,
             base_url,
             api_key,
             model,
             rate_limiter,
-        }
+        })
     }
 
     /// Создаёт экземпляр с кастомным HTTP-клиентом (для тестирования).

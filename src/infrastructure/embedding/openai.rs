@@ -31,44 +31,60 @@ impl OpenAIEmbeddingProvider {
     /// * `base_url` — базовый URL (например, `https://api.openai.com`).
     /// * `api_key` — ключ API.
     /// * `model` — модель эмбеддингов (по умолчанию `text-embedding-3-small`).
-    #[must_use]
-    pub fn new(base_url: String, api_key: String, model: String) -> Self {
+    ///
+    /// # Errors
+    ///
+    /// Возвращает [`SmithError::Memory`] при невозможности создания HTTP-клиента.
+    pub fn new(base_url: String, api_key: String, model: String) -> Result<Self> {
         let dimension = if model.contains("3-large") {
             3072
         } else {
             DEFAULT_EMBEDDING_DIM
         };
 
-        Self {
-            client: Client::builder()
-                .timeout(std::time::Duration::from_secs(30))
-                .build()
-                .expect("valid reqwest client"),
+        let client = Client::builder()
+            .timeout(std::time::Duration::from_secs(30))
+            .build()
+            .map_err(|e| SmithError::Memory {
+                operation: "embed".to_string(),
+                message: format!("failed to build HTTP client: {e}"),
+            })?;
+
+        Ok(Self {
+            client,
             base_url,
             api_key,
             model,
             dimension,
-        }
+        })
     }
 
     /// Создаёт с кастомной размерностью.
-    #[must_use]
+    ///
+    /// # Errors
+    ///
+    /// Возвращает [`SmithError::Memory`] при невозможности создания HTTP-клиента.
     pub fn with_dimension(
         base_url: String,
         api_key: String,
         model: String,
         dimension: usize,
-    ) -> Self {
-        Self {
-            client: Client::builder()
-                .timeout(std::time::Duration::from_secs(30))
-                .build()
-                .expect("valid reqwest client"),
+    ) -> Result<Self> {
+        let client = Client::builder()
+            .timeout(std::time::Duration::from_secs(30))
+            .build()
+            .map_err(|e| SmithError::Memory {
+                operation: "embed".to_string(),
+                message: format!("failed to build HTTP client: {e}"),
+            })?;
+
+        Ok(Self {
+            client,
             base_url,
             api_key,
             model,
             dimension,
-        }
+        })
     }
 }
 

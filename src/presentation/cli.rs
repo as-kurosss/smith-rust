@@ -123,14 +123,16 @@ impl CliArgs {
 
 /// Инициализирует tracing-subscriber с форматированным выводом в терминал.
 ///
-/// # Panics
-///
-/// Паникует при невозможности инициализации (только на старте приложения).
+/// При невалидном log level используется уровень `info` по умолчанию.
 pub fn init_tracing(log_level: &str) {
     use tracing_subscriber::EnvFilter;
 
-    let env_filter = EnvFilter::try_from_default_env()
-        .unwrap_or_else(|_| EnvFilter::try_new(log_level).expect("valid log level"));
+    let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| {
+        EnvFilter::try_new(log_level).unwrap_or_else(|_| {
+            // Fallback to default — this string is known to be valid
+            EnvFilter::new("smith_rust=info")
+        })
+    });
 
     tracing_subscriber::fmt()
         .with_env_filter(env_filter)

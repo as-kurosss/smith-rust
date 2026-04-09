@@ -106,24 +106,24 @@ impl<P: LLMProvider> ChatSession<P> {
             .map_err(|_| SmithError::LLM("LLM request timed out".to_string()))??;
 
             // Проверяем наличие tool calls
-            let tool_calls = response.tool_calls.clone();
-            let has_tool_calls = tool_calls.as_ref().is_some_and(|tc| !tc.is_empty());
-
-            if has_tool_calls {
-                let tool_calls = tool_calls.expect("tool_calls is some");
-                info!(
-                    iteration,
-                    tool_call_count = tool_calls.len(),
-                    "LLM returned tool calls"
-                );
-                let content = if response.content.is_empty() {
-                    None
+            if let Some(tool_calls) = response.tool_calls.clone() {
+                if tool_calls.is_empty() {
+                    // Final response without tool calls
                 } else {
-                    Some(response.content.clone())
-                };
-                self.execute_and_inject_tool_results(&tool_calls, content)
-                    .await?;
-                continue; // Повторяем запрос с обновлённой историей
+                    info!(
+                        iteration,
+                        tool_call_count = tool_calls.len(),
+                        "LLM returned tool calls"
+                    );
+                    let content = if response.content.is_empty() {
+                        None
+                    } else {
+                        Some(response.content.clone())
+                    };
+                    self.execute_and_inject_tool_results(&tool_calls, content)
+                        .await?;
+                    continue; // Повторяем запрос с обновлённой историей
+                }
             }
 
             // Финальный ответ без tool calls

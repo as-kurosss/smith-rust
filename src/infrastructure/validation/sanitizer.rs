@@ -98,7 +98,10 @@ fn mask_pattern(input: &str, pattern: &str, replacer: impl Fn(&str) -> String) -
         Err(_) => return input.to_string(),
     };
     re.replace_all(input, |caps: &regex::Captures<'_>| {
-        replacer(caps.get(0).unwrap().as_str())
+        // Safety: replace_all guarantees caps.get(0) is Some
+        caps.get(0)
+            .map(|m| replacer(m.as_str()))
+            .unwrap_or_else(|| "***".to_string())
     })
     .to_string()
 }
