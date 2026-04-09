@@ -1,7 +1,14 @@
 //! Асинхронный event-loop для TUI.
+//!
+//! Использует **только** `EventStream` из `crossterm` в комбинации с `tokio::select!`.
+//! Все события клавиш фильтруются по `KeyEventKind::Press`, чтобы избежать
+//! двойной обработки (KeyDown + KeyUp).
 
-use crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers};
+use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
+use crossterm::{cursor, execute, terminal};
 use futures_util::StreamExt;
+use ratatui::backend::CrosstermBackend;
+use ratatui::Terminal;
 use tokio::sync::mpsc;
 use tracing::{error, info, warn};
 
@@ -20,57 +27,89 @@ pub async fn run_tui(
     mut chat_rx: mpsc::Receiver<ChatEvent>,
     tx: mpsc::Sender<String>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    // Инициализация terminal
-    crossterm::terminal::enable_raw_mode()?;
-    let backend = ratatui::backend::CrosstermBackend::new(std::io::stderr());
-    let mut terminal = ratatui::Terminal::new(backend)?;
-    terminal.clear()?;
+    // Инициализация терминала с alternate screen
+    let terminal = setup_terminal()?;
 
-    let result = run_inner(&mut terminal, &mut state, &mut chat_rx, tx).await;
+    let result = run_inner(terminal, &mut state, &mut chat_rx, tx).await;
 
-    // Cleanup
-    crossterm::terminal::disable_raw_mode()?;
-    terminal.show_cursor()?;
+    // Гарантированная очистка (даже при панике)
+    cleanup_terminal()?;
 
     result
 }
 
+/// Настраивает терминал: raw mode + alternate screen + hide cursor.
+fn setup_terminal(
+) -> Result<Terminal<CrosstermBackend<std::io::Stdout>>, Box<dyn std::error::Error + Send + Sync>> {
+    terminal::enable_raw_mode()?;
+    let mut stdout = std::io::stdout();
+    execute!(stdout, terminal::EnterAlternateScreen, cursor::Hide)?;
+    let backend = CrosstermBackend::new(stdout);
+    let mut terminal = Terminal::new(backend)?;
+    terminal.clear()?;
+    Ok(terminal)
+}
+
+/// Восстанавливает терминал: disable raw mode + leave alternate screen + show cursor.
+fn cleanup_terminal() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    terminal::disable_raw_mode()?;
+    execute!(
+        std::io::stdout(),
+        terminal::LeaveAlternateScreen,
+        cursor::Show
+    )?;
+    Ok(())
+}
+
 async fn run_inner<B: ratatui::backend::Backend>(
-    terminal: &mut ratatui::Terminal<B>,
+    mut terminal: Terminal<B>,
     state: &mut TuiState,
     chat_rx: &mut mpsc::Receiver<ChatEvent>,
     tx: mpsc::Sender<String>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    let mut event_reader = crossterm::event::EventStream::new();
+    let mut event_stream = crossterm::event::EventStream::new();
+    let shutdown_signal = tokio::signal::ctrl_c();
+    tokio::pin!(shutdown_signal);
 
     loop {
         // Рендер
         terminal.draw(|frame| render(frame, state))?;
 
-        // Мультиплексирование: пользовательский ввод + chat events
+        // Мультиплексирование: пользовательский ввод + chat events + SIGINT
         tokio::select! {
-            // Пользовательский ввод
-            event = event_reader.next() => {
+            // 1. OS сигнал (SIGINT / Ctrl+C извне)
+            _ = &mut shutdown_signal => {
+                info!("Received SIGINT, initiating graceful shutdown");
+                break;
+            }
+
+            // 2. События терминала (ЕДИНСТВЕННЫЙ источник ввода)
+            event = event_stream.next() => {
                 match event {
                     Some(Ok(Event::Key(key))) => {
-                        if handle_key(state, key, &tx).await? {
+                        // Обрабатываем ТОЛЬКО нажатие (не отпускание) клавиши
+                        // Это предотвращает двойной ввод
+                        if key.kind == KeyEventKind::Press
+                            && handle_key(state, key, &tx).await?
+                        {
                             break;
                         }
                     }
                     Some(Ok(Event::Resize(_, _))) => {
-                        // Terminal resized, will re-render
+                        // Terminal resized, ratatui handles layout on next draw
                     }
                     Some(Err(e)) => {
-                        warn!(error = %e, "event read error");
+                        warn!(error = %e, "event stream error");
                     }
                     None => {
-                        // Channel closed
+                        // Stream closed
                         break;
                     }
                     _ => {}
                 }
             }
-            // Chat events
+
+            // 3. Обновления от бизнес-логики
             event = chat_rx.recv() => {
                 match event {
                     Some(chat_event) => handle_chat_event(state, chat_event),
@@ -96,13 +135,15 @@ async fn handle_key(
     tx: &mpsc::Sender<String>,
 ) -> Result<bool, Box<dyn std::error::Error + Send + Sync>> {
     match (key.modifiers, key.code) {
-        // Ctrl+C — выход
+        // Ctrl+C — выход (явный перехват, т.к. raw mode блокирует SIGINT)
         (KeyModifiers::CONTROL, KeyCode::Char('c')) => {
+            info!("Ctrl+C pressed, shutting down");
             state.should_quit = true;
             return Ok(true);
         }
         // Esc — выход
         (_, KeyCode::Esc) => {
+            info!("Esc pressed, shutting down");
             state.should_quit = true;
             return Ok(true);
         }
@@ -146,10 +187,14 @@ async fn handle_key(
         }
         // End
         (_, KeyCode::End) => {
-            state.cursor_pos = state.input.len();
+            state.cursor_pos = state.input.chars().count();
         }
-        // Char
-        (_, KeyCode::Char(c)) => {
+        // Tab — автодополнение (заглушка)
+        (_, KeyCode::Tab) => {
+            // TODO: implement tab completion
+        }
+        // Char — только без modifier-ов (иначе Ctrl+X и т.д. тоже попадут)
+        (KeyModifiers::NONE | KeyModifiers::SHIFT, KeyCode::Char(c)) => {
             state.handle_char(c);
         }
         _ => {}

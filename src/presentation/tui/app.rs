@@ -156,7 +156,7 @@ impl TuiState {
         };
         self.history_index = Some(new_index);
         self.input = self.input_history[new_index].clone();
-        self.cursor_pos = self.input.len();
+        self.cursor_pos = self.input.chars().count();
     }
 
     /// Переходит к следующему элементу в истории ввода.
@@ -172,7 +172,7 @@ impl TuiState {
                 let new_idx = idx + 1;
                 self.history_index = Some(new_idx);
                 self.input = self.input_history[new_idx].clone();
-                self.cursor_pos = self.input.len();
+                self.cursor_pos = self.input.chars().count();
             }
         }
     }
