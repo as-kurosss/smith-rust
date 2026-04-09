@@ -89,7 +89,13 @@ impl TuiState {
 
     /// Обрабатывает ввод символа.
     pub fn handle_char(&mut self, c: char) {
-        self.input.insert(self.cursor_pos, c);
+        let byte_idx = self
+            .input
+            .char_indices()
+            .nth(self.cursor_pos)
+            .map(|(i, _)| i)
+            .unwrap_or(self.input.len());
+        self.input.insert(byte_idx, c);
         self.cursor_pos += 1;
         self.history_index = None;
         self.error_message = None;
@@ -98,15 +104,28 @@ impl TuiState {
     /// Обрабатывает backspace.
     pub fn handle_backspace(&mut self) {
         if self.cursor_pos > 0 {
-            self.input.remove(self.cursor_pos - 1);
+            let byte_idx = self
+                .input
+                .char_indices()
+                .nth(self.cursor_pos - 1)
+                .map(|(i, _)| i)
+                .unwrap_or(self.input.len());
+            self.input.remove(byte_idx);
             self.cursor_pos -= 1;
         }
     }
 
     /// Обрабатывает delete.
     pub fn handle_delete(&mut self) {
-        if self.cursor_pos < self.input.len() {
-            self.input.remove(self.cursor_pos);
+        let char_count = self.input.chars().count();
+        if self.cursor_pos < char_count {
+            let byte_idx = self
+                .input
+                .char_indices()
+                .nth(self.cursor_pos)
+                .map(|(i, _)| i)
+                .unwrap_or(self.input.len());
+            self.input.remove(byte_idx);
         }
     }
 
@@ -119,7 +138,8 @@ impl TuiState {
 
     /// Перемещает курсор вправо.
     pub fn move_cursor_right(&mut self) {
-        if self.cursor_pos < self.input.len() {
+        let char_count = self.input.chars().count();
+        if self.cursor_pos < char_count {
             self.cursor_pos += 1;
         }
     }
@@ -260,5 +280,64 @@ mod tests {
             state.add_tool_call(format!("tool{i}"), "ok".to_string(), true);
         }
         assert!(state.recent_tools.len() <= 5);
+    }
+
+    #[test]
+    fn test_unicode_input_cyrillic() {
+        let mut state = TuiState::new();
+        // Вводим кириллицу: "Пр"
+        state.handle_char('П');
+        state.handle_char('р');
+        assert_eq!(state.input, "Пр");
+        assert_eq!(state.cursor_pos, 2); // 2 символа
+
+        // Backspace удаляет 'р'
+        state.handle_backspace();
+        assert_eq!(state.input, "П");
+        assert_eq!(state.cursor_pos, 1);
+
+        // Ещё backspace
+        state.handle_backspace();
+        assert_eq!(state.input, "");
+        assert_eq!(state.cursor_pos, 0);
+    }
+
+    #[test]
+    fn test_unicode_cursor_navigation() {
+        let mut state = TuiState::new();
+        state.handle_char('п');
+        state.handle_char('р');
+        state.handle_char('и');
+        state.handle_char('в');
+        state.handle_char('е');
+        state.handle_char('т');
+        assert_eq!(state.cursor_pos, 6); // 6 символов
+
+        // Стрелка влево
+        state.move_cursor_left();
+        assert_eq!(state.cursor_pos, 5);
+
+        // Вставляем символ в середину
+        state.handle_char('!');
+        assert_eq!(state.input, "приве!т");
+        assert_eq!(state.cursor_pos, 6);
+
+        // Delete удаляет 'т'
+        state.handle_delete();
+        assert_eq!(state.input, "приве!");
+    }
+
+    #[test]
+    fn test_unicode_emoji() {
+        let mut state = TuiState::new();
+        state.handle_char('🚀');
+        state.handle_char('🔥');
+        assert_eq!(state.input, "🚀🔥");
+        assert_eq!(state.cursor_pos, 2); // 2 символа (но 8 байт)
+
+        state.move_cursor_left();
+        assert_eq!(state.cursor_pos, 1);
+        state.handle_char('💡');
+        assert_eq!(state.input, "🚀💡🔥");
     }
 }
